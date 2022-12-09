@@ -8,6 +8,26 @@ from .models import Profile
 import os, sys, logging
 import random
 from .publisher import Publisher
+from loglibrary_x21171581.log_record import LogRecord 
+from loglibrary_x21171581.logger import Logger
+from loglibrary_x21171581.level import Level
+
+logger = Logger.create()
+logger.level = Level.ALL
+def log_listener(record):
+    print(record)
+    sys.stdout.flush()
+
+logger.on_record.listen(log_listener)
+
+def log_listener_file(log_record: LogRecord):
+    log_file_name = f'log-{log_record.time.strftime("%Y-%m-%d-%H")}.txt'
+    with open(log_file_name, 'a+') as f:
+        msg = f'{log_record.time} [{log_record.level.name}] {log_record.logger_name}: {log_record.message}'
+        f.write(msg)
+        f.write('\n')
+
+logger.on_record.listen(log_listener_file)
 
 
 publishermsg = Publisher()
@@ -22,6 +42,8 @@ def index(request):
 class SignIn(View):
     def get(self, request):
         if request.user.is_authenticated:
+            logger.info("User Signed in")
+            print("Logger test")
             return redirect('boards')
         else:
             return render(request, 'auth.html')
@@ -32,7 +54,7 @@ class SignIn(View):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            publishermsg.send_SMS_message("+353892456469", "User logged in !")
+            publishermsg.send_SMS_message("+353892456469", "User authentication successfull !")
             return redirect('boards')
 
         else:
@@ -53,14 +75,18 @@ class SignUp(View):
             username = request.POST['username']
             email = request.POST['email']
             password = request.POST['password']
+            # Store profile photo on S3 bucket
             # photo = request.file['image'].name
             # print(photo);
-            # upload_file("s3bucketproj",photo);
+            # upload_file("21171581taskmanager",photo);
             
             user = User.objects.create_user(username, email, password)
             user.save()
 
             login(request, user)
+            
+            # Send an SMS using SNS
+            publishermsg.send_SMS_message("+353892456469", "Congratulations ! You have successfully signed up on Task Manager !")
 
             n = random.randint(16, 45)
             pf_url = f'/media/users/{n}.jpg'
@@ -73,6 +99,8 @@ class SignUp(View):
             response = JsonResponse({"error": "Duplicate User or Server error"})
             response.status_code = 403
             return response
+            
+# Fucntion to upload files on S3
 
 # def upload_file(file_name, bucket, object_key=None):
 #     """Upload a file to an S3 bucket
