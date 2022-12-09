@@ -42,8 +42,10 @@ def index(request):
 class SignIn(View):
     def get(self, request):
         if request.user.is_authenticated:
+            # Library used to log 
             logger.info("User Signed in")
-            print("Logger test")
+            #SNS service used for notification
+            publishermsg.send_SMS_message("+353892456469", "User logged in !")
             return redirect('boards')
         else:
             return render(request, 'auth.html')
@@ -54,6 +56,7 @@ class SignIn(View):
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
+            #SNS service used for notification
             publishermsg.send_SMS_message("+353892456469", "User authentication successfull !")
             return redirect('boards')
 
